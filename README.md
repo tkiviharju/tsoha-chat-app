@@ -1,7 +1,7 @@
 # Real-time chat application 
 
-## University of Helsinki - DB application course project - HY-Tsoha
-https://hy-tsoha.github.io/
+## University of Helsinki - DB application course project
+https://hy-tsoha.github.io/materiaali/index
 
 ### Project Description
 * The application has different channels where the messaging takes place
