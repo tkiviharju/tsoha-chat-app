@@ -1,4 +1,4 @@
-from sqlalchemy import MetaData, Table, Column, Integer, String
+from sqlalchemy import MetaData, Table, Column, Integer, String, ForeignKey
 from db.client import get_db_client
 
 db = get_db_client()
@@ -9,8 +9,8 @@ message_table = Table(
     "message",
     metadata,
     Column("id", Integer, primary_key=True),
-    Column("channel_id", Integer),
-	Column("user_id", Integer),
+    Column("channel_id", Integer, ForeignKey("channel.id")),
+    Column("user_id", Integer, ForeignKey("user_account.id")),
     Column("content", String),
 )
 

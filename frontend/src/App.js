@@ -1,11 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
+import axios from 'axios';
 
 function App() {
     const [messages, setMessages] = useState([]);
     const [clientId] = useState(Date.now());
     const [value, setValue] = useState('');
     const webSocket = useRef(null);
+
+    useEffect(() => {
+        const fetchMessages = async () => {
+            const { data } = await axios.get('http://localhost:8000/messages');
+            if (data) {
+                setMessages(data.map((message) => message?.content));
+            }
+        };
+        fetchMessages();
+    }, []);
 
     useEffect(() => {
         webSocket.current = new WebSocket(`ws://localhost:8000/ws/${clientId}`);
