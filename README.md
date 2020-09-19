@@ -12,3 +12,11 @@ https://hy-tsoha.github.io/materiaali/index
 * A list of users that are online is displayed on the side of the application
 * The messaging in the channels happens in real-time using websockets
 * All messages are saved to a database
+
+
+### Start app
+## Backend
+`uvicorn main:app --reload`
+
+## Frontend 
+`npm start`
