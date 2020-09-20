@@ -9,4 +9,4 @@ frontend/.pnp.js
 
 .DS_Store
 frontend/npm-debug.log*
-.vscode
+.vscode/*
