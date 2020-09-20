@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional
+from datetime import datetime
 
 
 class Message(BaseModel):
@@ -7,6 +8,7 @@ class Message(BaseModel):
     content: str
     user_id: int
     channel_id: int
+    created: datetime
 
 
 class Channel(BaseModel):

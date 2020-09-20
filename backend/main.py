@@ -1,13 +1,14 @@
 from fastapi import FastAPI, WebSocket, Request, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-import requests
 from typing import List
+import json
+from datetime import datetime
 
 from schemas import Message, Channel, User
 from db.client import get_db_client
 from db.tables import message_table, channel_table, user_table
-from sqlalchemy.sql import select
+from sqlalchemy.sql import select, join
 
 
 class ConnectionManager:
@@ -100,6 +101,17 @@ async def get_one_channel(channel_id: int) -> Channel:
         return channel
 
 
+@app.get("/channels/{channel_id}/messages")
+async def get_channel_messages(channel_id: int) -> List[Message]:
+    with db.connect() as connection:
+        select_messages = f"SELECT message.content, message.created, user_account.username, message.id, message.channel_id FROM message JOIN user_account ON user_account.id = message.user_id WHERE message.channel_id = {int(channel_id)} ORDER BY message.created;"
+        result = connection.execute(select_messages)
+        if not result:
+            raise HTTPException(status_code=404, detail="no messages not found")
+
+        return list(result)
+
+
 @app.get("/users")
 async def get_users() -> List[User]:
     with db.connect() as connection:
@@ -121,8 +133,20 @@ async def create_user(user: User, status_code=201) -> JSONResponse:
         return {"id": created_id}
 
 
+@app.get("/users/{user_id}")
+async def get_one_user(user_id: int) -> User:
+    with db.connect() as connection:
+        get_user = select([user_table]).where(user_table.c.id == user_id)
+        result = connection.execute(get_user)
+        user = result.fetchone()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        return user
+
+
 @app.get("/users/{username}")
-async def get_one_user(username: str) -> User:
+async def get_one_user_by_name(username: str) -> User:
     with db.connect() as connection:
         get_user = select([user_table]).where(user_table.c.username == username)
         result = connection.execute(get_user)
@@ -133,28 +157,48 @@ async def get_one_user(username: str) -> User:
         return user
 
 
-@app.websocket("/ws/{client_id}")
-async def websocket_endpoint(websocket: WebSocket, client_id: int):
+@app.websocket("/ws/{channel_id}")
+async def websocket_endpoint(websocket: WebSocket, channel_id: int):
     await manager.connect(websocket)
     try:
         while True:
             data = await websocket.receive_text()
-            content = f"{client_id}: {data}"
-            await manager.broadcast(content)
-            message = await create_message(content)
-            print(message)
+            parsed_data = json.loads(data)
+            print(parsed_data)
+            # data
+            content = parsed_data.get("content")
+            username = parsed_data.get("username")
+            user_id = parsed_data.get("user_id")
+            created = datetime.utcnow()
+
+            if not content or not channel_id or not user_id:
+                print("not relevant data supplied :(")
+                continue
+
+            data = json.dumps(
+                {
+                    "username": username,
+                    "channel_id": channel_id,
+                    "content": content,
+                    "created": created,
+                },
+                default=str,
+            )
+            print(data)
+            await manager.broadcast(data)
+            await create_message(channel_id, user_id, content, created)
 
     except WebSocketDisconnect:
         manager.disconnect(websocket)
-        await manager.broadcast(f"{client_id} left the chat :(")
+        # await manager.broadcast(f"{username} left the chat :(")
 
 
-async def create_message(content: str):
+async def create_message(
+    channel_id: int, user_id: int, content: str, created: datetime
+):
     with db.connect() as connection:
         insert_message = message_table.insert().values(
-            content=content,
-            user_id=1,
-            channel_id=1,
+            content=content, user_id=user_id, channel_id=channel_id, created=created
         )
         result = connection.execute(insert_message)
         [created_id] = result.inserted_primary_key
@@ -162,4 +206,4 @@ async def create_message(content: str):
             print("failed to save message :(")
             return None
 
-        return {"id": created_id}
+        print("saved successfully")

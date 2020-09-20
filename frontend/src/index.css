@@ -5,4 +5,9 @@ body {
         'Helvetica Neue', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    background: #212222;
+}
+
+div {
+    box-sizing: border-box;
 }
